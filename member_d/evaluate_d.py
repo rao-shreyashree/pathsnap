@@ -26,6 +26,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score
 
 from member_d.config import (
     DATA_RAW_STUDENT_TEST,
+    DATA_RAW_EVALUATOR_TEST,
     MAPS_DIR,
     MODELS_DIR,
     RESULTS_DIR,
@@ -274,5 +275,70 @@ def run_full_evaluation(model_path: str | Path | None = None) -> pd.DataFrame:
     return df
 
 
+def run_evaluator_test_evaluation(model_path: str | Path | None = None) -> pd.DataFrame:
+    """Run comparative evaluation across all 10 evaluator-test trips."""
+    if model_path is None:
+        model_path = MODELS_DIR / "random_forest_model.joblib"
+    model = RandomForestModel.load(model_path)
+
+    if not DATA_RAW_EVALUATOR_TEST.exists():
+        raise FileNotFoundError(f"Evaluator test directory not found: {DATA_RAW_EVALUATOR_TEST}")
+
+    test_dirs = sorted([d for d in DATA_RAW_EVALUATOR_TEST.iterdir() if d.is_dir()])
+    print(f"[Evaluator Test] Evaluating {len(test_dirs)} reserved evaluator trips...")
+
+    results: list[dict[str, Any]] = []
+
+    for d in test_dirs:
+        # Generate interactive Folium map for the first 3 evaluator trips
+        gen_map = d.name in {"00000015", "00000023", "00000073"}
+        print(f"[Evaluator Test] Running Trip {d.name} (generate_map={gen_map})...")
+        res = evaluate_trip(d, model=model, generate_map=gen_map)
+        results.append(res)
+        print(f"  -> Top-1 RF: {res['top1_acc_rf']} | Top-1 HMM: {res['top1_acc_hmm']} (Delta: {res['acc_delta']:+0.4f}) | Continuity: {res['continuity_rf']} -> {res['continuity_hmm']} | Breaks: {res['breaks_rf']} -> {res['breaks_hmm']}")
+
+    df = pd.DataFrame(results)
+
+    # Save detailed CSV
+    csv_path = RESULTS_DIR / "evaluator_test_comparison.csv"
+    df.to_csv(csv_path, index=False)
+
+    # Compute overall aggregates
+    summary = {
+        "n_trips": int(len(df)),
+        "total_observations": int(df["n_obs"].sum()),
+        "mean_top1_rf": round(float(df["top1_acc_rf"].mean()), 4),
+        "mean_top1_hmm": round(float(df["top1_acc_hmm"].mean()), 4),
+        "mean_acc_delta": round(float(df["acc_delta"].mean()), 4),
+        "mean_continuity_rf": round(float(df["continuity_rf"].mean()), 4),
+        "mean_continuity_hmm": round(float(df["continuity_hmm"].mean()), 4),
+        "total_breaks_rf": int(df["breaks_rf"].sum()),
+        "total_breaks_hmm": int(df["breaks_hmm"].sum()),
+        "mean_candidate_miss_rate": round(float(df["candidate_miss_rate"].mean()), 4),
+        "mean_macro_f1": round(float(df["macro_f1"].mean()), 4),
+        "mean_inference_time_ms_per_trip": round(float(df["t_total_ms"].mean()), 1),
+    }
+
+    summary_path = RESULTS_DIR / "evaluator_test_summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    print("\n" + "="*70)
+    print("MEMBER D EVALUATION SUMMARY (EVALUATOR TEST - 10 TRIPS)")
+    print("="*70)
+    print(f"Mean Top-1 Accuracy:  RF-Only: {summary['mean_top1_rf']:.4f}  -->  RF+HMM: {summary['mean_top1_hmm']:.4f}  (Gain: {summary['mean_acc_delta']:+0.4f})")
+    print(f"Mean Route Continuity: RF-Only: {summary['mean_continuity_rf']:.4f}  -->  RF+HMM: {summary['mean_continuity_hmm']:.4f}")
+    print(f"Total Disconnected Breaks: RF-Only: {summary['total_breaks_rf']}  -->  RF+HMM: {summary['total_breaks_hmm']} (Reduction: -{summary['total_breaks_rf'] - summary['total_breaks_hmm']})")
+    print(f"Mean Candidate Miss Rate: {summary['mean_candidate_miss_rate']:.4f}")
+    print(f"Mean Latency per Trip: {summary['mean_inference_time_ms_per_trip']:.1f} ms")
+    print("="*70)
+    print(f"Results CSV saved to: {csv_path}")
+    print(f"Summary JSON saved to: {summary_path}")
+
+    return df
+
+
 if __name__ == "__main__":
     run_full_evaluation()
+    if DATA_RAW_EVALUATOR_TEST.exists():
+        run_evaluator_test_evaluation()

@@ -40,13 +40,18 @@ member_d/
 ├── models/
 │   └── random_forest_model.joblib # Serialized trained Random Forest pipeline
 ├── results/
-│   ├── rf_training_meta.json       # CV metrics and training parameters
-│   ├── student_test_comparison.csv # Exact trip-by-trip evaluation comparison (10 trips)
-│   └── student_test_summary.json   # Aggregate benchmark statistics
+│   ├── rf_training_meta.json          # CV metrics and training parameters
+│   ├── student_test_comparison.csv    # Trip-by-trip evaluation comparison (10 trips)
+│   ├── student_test_summary.json      # Aggregate benchmark statistics
+│   ├── evaluator_test_comparison.csv  # Official evaluator test comparison (10 trips)
+│   └── evaluator_test_summary.json    # Official evaluator test aggregate summary
 ├── maps/
-│   ├── trip_00000000.html         # Interactive map for trip 00000000
-│   ├── trip_00000007.html         # Interactive map for trip 00000007 (96.7% continuity)
-│   └── trip_00000052.html         # Interactive map for trip 00000052
+│   ├── trip_00000000.html            # Student test trip 00000000 map
+│   ├── trip_00000007.html            # Student test trip 00000007 map (96.7% continuity)
+│   ├── trip_00000052.html            # Student test trip 00000052 map
+│   ├── trip_00000015.html            # Evaluator test trip 00000015 map (6,854 points)
+│   ├── trip_00000023.html            # Evaluator test trip 00000023 map
+│   └── trip_00000073.html            # Evaluator test trip 00000073 map (89.4% continuity)
 ├── MEMBER_D_REPORT.md        # Complete Section 5 technical report contribution
 └── README.md                 # Setup, execution, and integration guide (this file)
 ```
@@ -83,7 +88,7 @@ python member_d/evaluate_d.py
 
 ## 4. Empirical Evaluation Results (Actual Measured Data)
 
-Evaluated on identical observations and ground truth across all **10 official student-test development trips** ($19,160$ observations):
+### 4.1 Development Benchmark (10 Student-Test Trips, 19,160 Observations)
 
 | Evaluation Metric | Random Forest Only (Pointwise) | RF + HMM + Viterbi (Sequential) | Impact / Delta |
 | :--- | :---: | :---: | :---: |
@@ -92,6 +97,16 @@ Evaluated on identical observations and ground truth across all **10 official st
 | **Total Disconnected Breaks** | 1,767 | **671** | **$-1,096$ breaks ($-62.0\%$)** |
 | **Candidate Miss Rate** | 65.31% | 65.31% | (Identical candidate pool) |
 | **Mean Inference Latency** | 108.5 ms | 1,101.9 ms | **6.08 s total trip latency** |
+
+### 4.2 Official Evaluator Benchmark (10 Reserved Trips, 19,674 Observations)
+
+| Evaluation Metric | Random Forest Only (Pointwise) | RF + HMM + Viterbi (Sequential) | Impact / Delta |
+| :--- | :---: | :---: | :---: |
+| **Observation-Level Top-1 Accuracy** | 35.14% | **37.41%** | **$+2.28\%$** (Up to $+7.37\%$) |
+| **Route Continuity** | 74.07% | **75.48%** | **$+1.41$ percentage points** |
+| **Total Disconnected Breaks** | 1,563 | **794** | **$-769$ breaks ($-49.2\%$)** |
+| **Candidate Miss Rate** | 58.44% | 58.44% | (Identical candidate pool) |
+| **Mean Inference Latency** | 98.4 ms | 1,029.5 ms | **4.96 s total trip latency** |
 
 ---
 

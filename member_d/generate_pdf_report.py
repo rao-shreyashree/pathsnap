@@ -25,11 +25,13 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 ROOT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_PDF = ROOT_DIR / "report.pdf"
 CSV_PATH = ROOT_DIR / "member_d" / "results" / "student_test_comparison.csv"
+CSV_EVAL_PATH = ROOT_DIR / "member_d" / "results" / "evaluator_test_comparison.csv"
 META_PATH = ROOT_DIR / "member_d" / "results" / "rf_training_meta.json"
 
 def build_pdf():
     # Load evaluation CSV and metadata
     df = pd.read_csv(CSV_PATH) if CSV_PATH.exists() else None
+    df_eval = pd.read_csv(CSV_EVAL_PATH) if CSV_EVAL_PATH.exists() else None
     with open(META_PATH) as f:
         meta = json.load(f)
 
@@ -270,11 +272,11 @@ def build_pdf():
     ))
     story.append(Spacer(1, 8))
 
-    # 6. Empirical Results Table
+    # 6. Empirical Results Table (Student Test)
     story.append(Paragraph("5. Empirical Benchmark: Classifier-Only vs. RF+HMM+Viterbi", h1_style))
     story.append(Paragraph(
-        "Evaluated on identical GPS observations and monotone ground-truth reference alignments across all 10 student-test development trips:",
-        body_style
+        "<b>5.1 Development-Stage Benchmark (Student-Test — 10 Trips):</b>",
+        h2_style
     ))
 
     res_headers = [
@@ -334,6 +336,70 @@ def build_pdf():
     ]))
     story.append(t_res)
     story.append(Spacer(1, 10))
+
+    # Table 5.2: Evaluator-Test Table
+    if df_eval is not None:
+        story.append(Paragraph(
+            "<b>5.2 Official Reserved Evaluator Benchmark (Evaluator-Test — 10 Trips):</b>",
+            h2_style
+        ))
+        eval_headers = [
+            Paragraph("Trip ID", table_header),
+            Paragraph("Fixes", table_header),
+            Paragraph("Top-1 (RF)", table_header),
+            Paragraph("Top-1 (HMM)", table_header),
+            Paragraph("Top-1 Gain", table_header),
+            Paragraph("Cont. (RF)", table_header),
+            Paragraph("Cont. (HMM)", table_header),
+            Paragraph("Breaks (RF)", table_header),
+            Paragraph("Breaks (HMM)", table_header),
+            Paragraph("Latency", table_header),
+        ]
+        eval_rows = [eval_headers]
+        for _, r in df_eval.iterrows():
+            gain_str = f"+{r['acc_delta']:.4f}" if r['acc_delta'] >= 0 else f"{r['acc_delta']:.4f}"
+            eval_rows.append([
+                Paragraph(str(r['trip_id']), table_cell),
+                Paragraph(f"{int(r['n_obs']):,}", table_cell),
+                Paragraph(f"{r['top1_acc_rf']:.4f}", table_cell),
+                Paragraph(f"<b>{r['top1_acc_hmm']:.4f}</b>", table_cell),
+                Paragraph(f"<b>{gain_str}</b>", table_cell),
+                Paragraph(f"{r['continuity_rf']:.2%}", table_cell),
+                Paragraph(f"<b>{r['continuity_hmm']:.2%}'</b>".replace("''",""), table_cell),
+                Paragraph(str(int(r['breaks_rf'])), table_cell),
+                Paragraph(f"<b>{int(r['breaks_hmm'])}</b>", table_cell),
+                Paragraph(f"{r['t_total_ms']/1000:.1f}s", table_cell),
+            ])
+
+        # Summary row for evaluator
+        eval_mean_gain = df_eval['acc_delta'].mean()
+        eval_gain_summary = f"+{eval_mean_gain:.4f}" if eval_mean_gain >= 0 else f"{eval_mean_gain:.4f}"
+        eval_rows.append([
+            Paragraph("<b>OVERALL</b>", table_header),
+            Paragraph(f"<b>{int(df_eval['n_obs'].sum()):,}</b>", table_header),
+            Paragraph(f"<b>{df_eval['top1_acc_rf'].mean():.4f}</b>", table_header),
+            Paragraph(f"<b>{df_eval['top1_acc_hmm'].mean():.4f}</b>", table_header),
+            Paragraph(f"<b>{eval_gain_summary}</b>", table_header),
+            Paragraph(f"<b>{df_eval['continuity_rf'].mean():.2%}</b>", table_header),
+            Paragraph(f"<b>{df_eval['continuity_hmm'].mean():.2%}</b>", table_header),
+            Paragraph(f"<b>{int(df_eval['breaks_rf'].sum()):,}</b>", table_header),
+            Paragraph(f"<b>{int(df_eval['breaks_hmm'].sum()):,}</b>", table_header),
+            Paragraph(f"<b>{df_eval['t_total_ms'].mean()/1000:.2f}s</b>", table_header),
+        ])
+
+        t_eval = Table(eval_rows, colWidths=[0.8*inch, 0.6*inch, 0.75*inch, 0.75*inch, 0.7*inch, 0.75*inch, 0.75*inch, 0.65*inch, 0.65*inch, 0.7*inch])
+        t_eval.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1a365d")),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e0")),
+            ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.HexColor("#f7fafc"), colors.white]),
+            ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor("#2b6cb0")),
+            ('TOPPADDING', (0,0), (-1,-1), 2),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ]))
+        story.append(t_eval)
+        story.append(Spacer(1, 10))
 
     # Page Break for Case Studies & Viva Section
     story.append(PageBreak())

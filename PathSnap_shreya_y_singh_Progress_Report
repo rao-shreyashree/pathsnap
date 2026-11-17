@@ -1,0 +1,30 @@
+# PathSnap · Member B progress report
+
+**Shreya (yasho-26singh) · 18 November 2026**
+
+PathSnap reconstructs vehicle routes from noisy GPS observations and a road network. My contribution covers the distance-weighted KNN baseline, the evaluation harness, and the Laptop 2 evaluator interface.
+
+## KNN and model evaluation
+
+I worked on a KNN baseline that ranks candidate roads for each GPS observation. It uses 15 neighbors and gives closer training examples more weight. The feature scaler is fitted within each training fold. The evaluation code groups by trip, so GPS observations from the same trip stay together during cross-validation. It records observation-level top-1 accuracy, candidate-level macro F1, log loss, and candidate miss rate.
+
+| experiment | mean grouped CV top-1 | student-test top-1 | student-test candidate macro F1 |
+|---|---:|---:|---:|
+| Original three-feature prototype | — | 78.12% | 0.854 |
+| Shared 16-feature pipeline | 62.15% | 69.20% | 0.797 |
+
+The shared-feature run used five trip-grouped folds over 80 training trips and evaluated all 19,160 observations on the 10 student-test trips. Each fit used a reproducible sample of 4,000 candidate rows. The final fit sample included all 80 training trips. The prototype and shared-feature runs used different candidate and fitting setups, so their scores do not isolate the effect of changing the features.
+
+## Laptop 2 interface and integration
+
+The interface lists trips, sends the selected trip ID to FastAPI, and displays the predicted route, its start and end, and the accuracy and observation counts returned by the server. It supports the backend's route-segment format and GeoJSON. Demo mode works with illustrative data.
+
+The updated interface displayed a route and accuracy for all 10 student-test trips using the actual FastAPI backend and its published boosting model on one laptop. The backend returned classifier-only routes because its HMM decoder was unavailable during this run. The score displayed for a selected trip is the backend model's result for that trip. The KNN results above are separate benchmark results.
+
+## Repository and remaining checks
+
+- The original Member B files were pushed to b-knn-ui and submitted in [PR #4](https://github.com/rao-shreyashree/pathsnap/pull/4). Shreyashree Rao was requested as reviewer.
+- The shared-feature KNN results and the updated API-compatible UI are in PathSnap_B_Verification.zip in Downloads. Those updates have not been pushed in the recorded work. The ZIP includes the fold metrics, a browser verification log, and a screenshot.
+- The final demo still needs a two-laptop test with the reserved evaluator trips and the HMM decoder enabled.
+
+AI assistance was used to develop and test the code and prepare the documentation.

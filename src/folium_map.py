@@ -26,10 +26,9 @@ def _arc_coords(trip, arc_ids):
                 out.append([[nd.lat.iat[a], nd.lon.iat[a]], [nd.lat.iat[b], nd.lon.iat[b]]])
     return out
 
-
-def make_map(trip, out_html, pred_arcs=None, margin_deg=0.004, max_net_arcs=8000):
+def make_map(trip, out_html=None, pred_arcs=None, margin_deg=0.004, max_net_arcs=8000):
     tr = trip.track.dropna()
-    m = folium.Map(location=[tr.lat.mean(), tr.lon.mean()], zoom_start=15, tiles="OpenStreetMap")
+    m = folium.Map(location=[tr.lat.mean(), tr.lon.mean()], zoom_start=15, tiles="Esri WorldStreetMap")
     m.fit_bounds([[tr.lat.min(), tr.lon.min()], [tr.lat.max(), tr.lon.max()]])
 
     # road network, restricted to the trip's neighbourhood
@@ -64,7 +63,8 @@ def make_map(trip, out_html, pred_arcs=None, margin_deg=0.004, max_net_arcs=8000
         g.add_to(m)
     folium.LayerControl(collapsed=False).add_to(m)
     m.get_root().html.add_child(folium.Element(LEGEND))
-    m.save(str(out_html))
+    if out_html is not None:
+        m.save(str(out_html))
     return m
 
 
@@ -77,3 +77,4 @@ if __name__ == "__main__":
         if args.trip is None or t.trip_id == args.trip:
             out = config.MAPS_DIR / f"{t.trip_id}.html"
             make_map(t, out); print("saved", out); break
+        

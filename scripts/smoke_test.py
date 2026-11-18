@@ -26,9 +26,13 @@ assert call("/predict", {"trip_id": ""})[0] == 422
 for t in trips:
     code, out = call("/predict", {"trip_id": t})
     assert code == 200 and out["trip_id"] == t, (t, code, out)
-    assert out["predicted_route"]["type"] in ("LineString", "MultiLineString")
+    seg = out["predicted_route"][0]
+    assert len(seg) == 2 and len(seg[0]) == 2, "route must be [[lat,lon],[lat,lon]] segments"
+    assert out["gps"] and {"obs_idx", "lat", "lon", "ts"} <= set(out["gps"][0])
     m = out["metrics"]
-    assert 0 <= m["pointwise_accuracy"] <= 1 and m["correct_observations"] <= m["scored_observations"]
-    assert "reference" not in json.dumps(out).lower() and "label" not in json.dumps(out).lower()
-    print(t, m, out["details"]["method"], out["details"]["elapsed_seconds"], "s")
+    for k in ("n_obs", "top1_classifier_only", "top1_with_hmm", "route_continuity", "inference_ms"):
+        assert k in m, k
+    text = json.dumps(out).lower()
+    assert "reference" not in text and "label" not in text and "ref_arc" not in text
+    print(t, m)
 print("ALL OK")

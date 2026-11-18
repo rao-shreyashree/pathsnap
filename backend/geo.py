@@ -56,3 +56,15 @@ def continuity(pred_by_obs, arcs):
         return None
     ok = sum(a == b or arcs[a][1] == arcs[b][0] for a, b in zip(seq, seq[1:]))
     return ok / (len(seq) - 1)
+
+
+def arcs_to_segments(arc_ids, nodes, arcs):
+    """Ordered arc ids -> [[ [lat, lon], [lat, lon] ], ...], one [from, to] segment per arc
+    (consecutive duplicates dropped). This is the format of B's API_CONTRACT.md."""
+    nodes, arcs = as_array(nodes), as_array(arcs)
+    out = []
+    for a in [int(k) for k, _ in groupby(arc_ids)]:
+        u, v = int(arcs[a][0]), int(arcs[a][1])
+        out.append([[float(nodes[u][1]), float(nodes[u][0])],
+                    [float(nodes[v][1]), float(nodes[v][0])]])
+    return out

@@ -10,7 +10,7 @@ import joblib
 import pandas as pd
 
 from backend import config as cfg
-from backend.geo import arcs_to_geojson, continuity, pointwise_score
+from backend.geo import arcs_to_segments, continuity, pointwise_score
 from src.candidates import FEATURE_COLS, build_trip_tables
 from src.data_io import load_trip
 
@@ -99,28 +99,35 @@ class Pipeline:
         clf = self._classifier_only(cand)
         hmm = self._hmm(trip, obs, cand, warnings)
         final = hmm if hmm is not None else clf
+        inference_ms = round(1000 * (time.time() - t0), 1)   # prediction only, no evaluation
 
+        # server-side evaluation against the reference route (never returned)
         ref = self._reference(trip_id)
         correct, scored = pointwise_score(final, ref)
         if scored == 0:
             warnings.append("no scoreable observations")
         c_clf, _ = pointwise_score(clf, ref)
-        c_hmm = pointwise_score(hmm, ref)[0] if hmm is not None else None
+        frac = lambda c: round(c / scored, 4) if scored else "n/a"
+        method = "hmm_viterbi" if hmm is not None else "classifier_only"
+        cont = continuity(final, trip.arcs)
 
-        route = [final[k] for k in sorted(final)]
-        elapsed = round(time.time() - t0, 3)
-        log.info("predict trip=%s method=%s acc=%d/%d clf_acc=%d/%d cont=%s time=%.2fs",
-                 trip_id, "hmm_viterbi" if hmm is not None else "classifier_only",
-                 correct, scored, c_clf, scored, continuity(final, trip.arcs), elapsed)
-        return {
-            "trip_id": trip_id,
-            "predicted_route": arcs_to_geojson(route, trip.nodes, trip.arcs),
-            "metrics": {"pointwise_accuracy": correct / scored if scored else 0.0,
-                        "correct_observations": correct, "scored_observations": scored},
-            "details": {
-                "method": "hmm_viterbi" if hmm is not None else "classifier_only",
-                "classifier_only_accuracy": c_clf / scored if scored else None,
-                "hmm_accuracy": (c_hmm / scored if scored else None) if hmm is not None else None,
-                "n_observations": len(final), "n_candidate_rows": len(cand),
-                "elapsed_seconds": elapsed, "warnings": warnings},
+        metrics = {
+            "n_obs": int(len(obs)),
+            "top1_classifier_only": frac(c_clf),
+            "top1_with_hmm": frac(pointwise_score(hmm, ref)[0]) if hmm is not None else "n/a",
+            "route_continuity": round(cont, 4) if cont is not None else "n/a",
+            "inference_ms": inference_ms,
+            # extras from the earlier agreement; the UI shows every entry
+            "pointwise_accuracy": frac(correct),
+            "correct_observations": int(correct),
+            "scored_observations": int(scored),
+            "method": method,
         }
+        route = [final[k] for k in sorted(final)]
+        gps = [{"obs_idx": int(i), "lat": float(r.lat), "lon": float(r.lon), "ts": float(r.ts)}
+               for i, r in zip(trip.track.index, trip.track.itertuples())]
+        log.info("predict trip=%s method=%s acc=%d/%d clf_acc=%d/%d cont=%s inference=%.0fms",
+                 trip_id, method, correct, scored, c_clf, scored, metrics["route_continuity"], inference_ms)
+        return {"trip_id": trip_id, "gps": gps,
+                "predicted_route": arcs_to_segments(route, trip.nodes, trip.arcs),
+                "metrics": metrics, "warnings": warnings}

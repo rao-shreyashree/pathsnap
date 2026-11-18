@@ -29,3 +29,9 @@ if __name__ == "__main__":
         if n.startswith("test_"):
             f()
     print("ok")
+
+
+def test_segments_lat_lon_order():
+    from backend.geo import arcs_to_segments
+    assert arcs_to_segments([0, 0, 1], NODES, ARCS) == [
+        [[50.0, 10.0], [50.0, 10.1]], [[50.0, 10.1], [50.0, 10.2]]]

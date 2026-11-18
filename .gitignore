@@ -4,5 +4,6 @@ __pycache__/
 venv/
 data/train/
 data/student_test/
+data/evaluator_test/
 *.parquet
 results/maps/

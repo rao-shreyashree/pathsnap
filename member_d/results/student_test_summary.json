@@ -1,0 +1,14 @@
+{
+  "n_trips": 10,
+  "total_observations": 19160,
+  "mean_top1_rf": 0.2681,
+  "mean_top1_hmm": 0.2846,
+  "mean_acc_delta": 0.0165,
+  "mean_continuity_rf": 0.7077,
+  "mean_continuity_hmm": 0.8089,
+  "total_breaks_rf": 1767,
+  "total_breaks_hmm": 671,
+  "mean_candidate_miss_rate": 0.6531,
+  "mean_macro_f1": 0.549,
+  "mean_inference_time_ms_per_trip": 5712.7
+}

@@ -1,0 +1,2 @@
+model,cv_macro_f1_mean,cv_macro_f1_sd,student_top1,student_macro_f1,student_log_loss,student_candidate_miss_rate,student_direct_arc_continuity,student_ms_per_observation
+Distance-weighted KNN,0.8336075629677184,0.01806923303014319,0.7812108559498956,0.8536649988720464,0.4746128311340793,0.03559498956158669,0.8651697127937337,0.08999487995908893

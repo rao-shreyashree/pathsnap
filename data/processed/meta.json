@@ -1,0 +1,23 @@
+{
+  "radius_m": 300.0,
+  "max_cand": 50,
+  "seed": 42,
+  "feature_cols": [
+    "dist_m",
+    "dist_rank",
+    "dist_minus_min",
+    "n_cand",
+    "is_nearest",
+    "proj_frac",
+    "arc_len_m",
+    "dist_to_end_m",
+    "heading_diff",
+    "cos_heading_diff",
+    "heading_valid",
+    "arc_bearing_sin",
+    "arc_bearing_cos",
+    "speed_mps",
+    "dt_prev",
+    "dt_next"
+  ]
+}

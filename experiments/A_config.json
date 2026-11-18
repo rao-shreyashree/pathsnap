@@ -1,0 +1,35 @@
+{
+  "seed": 42,
+  "radius_m": 300.0,
+  "max_cand": 50,
+  "features": [
+    "dist_m",
+    "dist_rank",
+    "dist_minus_min",
+    "n_cand",
+    "is_nearest",
+    "proj_frac",
+    "arc_len_m",
+    "dist_to_end_m",
+    "heading_diff",
+    "cos_heading_diff",
+    "heading_valid",
+    "arc_bearing_sin",
+    "arc_bearing_cos",
+    "speed_mps",
+    "dt_prev",
+    "dt_next"
+  ],
+  "hyperparams": {
+    "logreg": {
+      "C": 1.0,
+      "solver": "lbfgs",
+      "max_iter": 500,
+      "class_weight": null
+    },
+    "gnb": {
+      "var_smoothing": 1e-09
+    }
+  },
+  "cv": "GroupKFold(5) by trip_id on the 80 training trips"
+}

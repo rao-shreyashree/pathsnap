@@ -30,9 +30,12 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+__pycache__/
+*.pyc
 
 # Data & Archives
-data/
+data/train/
+data/student_test/
 *.zip
 *.tar.gz
 
@@ -50,3 +53,7 @@ PROJECT_REQUIREMENTS_SUMMARY.md
 RISKS_AND_ASSUMPTIONS.md
 TEAM_INTERFACE_QUESTIONS.md
 docs/
+.ipynb_checkpoints/
+
+*.parquet
+results/maps/

@@ -1,8 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+htmlcov/
 __pycache__/
 *.pyc
-.ipynb_checkpoints/
-venv/
+
+# Data & Archives
 data/train/
 data/student_test/
+*.zip
+*.tar.gz
+
+# Scratch & Temporary
+test_map.html
+*.log
+
+# Prompt files and starter kits (internal)
+prompts/
+reference/
+README_FIRST.md
+DATASET_AUDIT.md
+MEMBER_D_PLAN.md
+PROJECT_REQUIREMENTS_SUMMARY.md
+RISKS_AND_ASSUMPTIONS.md
+TEAM_INTERFACE_QUESTIONS.md
+docs/
+.ipynb_checkpoints/
+
 *.parquet
 results/maps/

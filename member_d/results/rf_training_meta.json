@@ -1,0 +1,47 @@
+{
+  "model_name": "RandomForestClassifier",
+  "algorithm_family": "Ensemble (Bagging)",
+  "rf_params": {
+    "n_estimators": 100,
+    "max_depth": 15,
+    "min_samples_leaf": 10,
+    "max_features": "sqrt",
+    "random_state": 42,
+    "n_jobs": -1
+  },
+  "seed": 42,
+  "train_time_s": 1.93,
+  "inference_time_ms_per_1000_obs": 43.31,
+  "cv_summary": {
+    "macro_f1_mean": 0.5935,
+    "macro_f1_std": 0.0455,
+    "precision_mean": 0.512,
+    "recall_mean": 0.1386,
+    "accuracy_mean": 0.9545,
+    "log_loss_mean": 0.1173,
+    "n_samples": 64610,
+    "n_trips": 25,
+    "feature_names": [
+      "perp_dist",
+      "dist_rank",
+      "dist_minus_min",
+      "rel_dist",
+      "along_arc_t",
+      "dist_to_start",
+      "dist_to_end",
+      "arc_length",
+      "speed",
+      "dt_prev",
+      "dt_next",
+      "heading_diff_abs",
+      "cos_heading_diff",
+      "sin_heading_diff",
+      "num_candidates",
+      "has_reverse_twin",
+      "from_node_deg",
+      "to_node_deg",
+      "context_mean_dist_w3",
+      "context_is_nearest_w3"
+    ]
+  }
+}

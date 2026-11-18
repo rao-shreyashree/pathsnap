@@ -1,0 +1,2 @@
+model,cv_macro_f1_mean,cv_macro_f1_sd,student_top1,student_macro_f1,student_log_loss,student_candidate_miss_rate,student_direct_arc_continuity,student_ms_per_observation
+HistGradientBoosting (untuned),0.8620043050966912,0.04955086468525184,0.8508350730688935,0.9183895834072839,0.025557577932859447,0.0,0.6986945169712794,0.20945112734864085

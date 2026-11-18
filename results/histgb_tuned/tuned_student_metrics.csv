@@ -1,0 +1,2 @@
+split,trips,observations,candidate_rows,candidate_accuracy,candidate_macro_precision,candidate_macro_recall,candidate_macro_f1,candidate_log_loss,observation_top1,candidate_miss_rate,direct_arc_continuity,fit_seconds,inference_seconds,inference_ms_per_observation
+student_test,10,19160,756598,0.9770049616837475,0.7620415552835912,0.9785194921535062,0.8357443210638094,0.06410511868593866,0.8539144050104384,0.0,0.7013054830287206,172.06038239999998,3.965328000000227,0.2069586638831016

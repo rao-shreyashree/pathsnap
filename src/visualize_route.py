@@ -22,8 +22,8 @@ import folium
 import numpy as np
 import pandas as pd
 
-from member_d.config import MAPS_DIR
-from member_d.road_graph import RoadGraph
+from src.config import MAPS_DIR
+from src.road_graph import RoadGraph
 
 
 def create_trip_map(

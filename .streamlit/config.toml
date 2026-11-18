@@ -1,0 +1,7 @@
+# Copy this folder to the REPO ROOT (next to ui/ and src/); Streamlit reads it from where you run `streamlit run`.
+[theme]
+base = "dark"
+primaryColor = "#ff3b30"
+backgroundColor = "#0b1220"
+secondaryBackgroundColor = "#131c2e"
+textColor = "#e6edf7"

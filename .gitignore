@@ -20,41 +20,50 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Virtual environments
 .venv/
-env/
 venv/
+env/
 ENV/
 
-# Testing & Cache
+# Testing & caches
 .pytest_cache/
 .coverage
 htmlcov/
-__pycache__/
-*.pyc
+.ipynb_checkpoints/
 
-# Data & Archives
+# Raw data & archives
 data/train/
 data/student_test/
+data/evaluator_test/
 *.zip
 *.tar.gz
 
-# Scratch & Temporary
+# Generated data (rebuild with: python -m src.build_dataset)
+*.parquet
+data/processed/*.parquet
+
+# Generated outputs
+results/maps/
 test_map.html
 *.log
 
-# Prompt files and starter kits (internal)
+# Internal notes, prompts and starter kits
 prompts/
 reference/
+docs/
 README_FIRST.md
 DATASET_AUDIT.md
 MEMBER_D_PLAN.md
 PROJECT_REQUIREMENTS_SUMMARY.md
 RISKS_AND_ASSUMPTIONS.md
 TEAM_INTERFACE_QUESTIONS.md
-docs/
-.ipynb_checkpoints/
 
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 *.parquet
 results/maps/
 data/

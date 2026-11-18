@@ -26,7 +26,7 @@ from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from member_d.config import (
+from src.config import (
     DATA_RAW_TRAIN,
     FEATURE_NAMES,
     MODELS_DIR,

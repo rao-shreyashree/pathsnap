@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 import numpy as np
 
-from member_d.config import (
+from src.config import (
     HMM_BETA_M,
     HMM_EMISSION_WEIGHT,
     HMM_EMISSION_EPSILON,

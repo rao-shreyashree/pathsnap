@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-from member_d.config import (
+from src.config import (
     EARTH_RADIUS_M,
     DEFAULT_CROP_MARGIN_DEG,
     SAMPLE_SPACING_M,

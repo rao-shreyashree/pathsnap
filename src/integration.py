@@ -6,11 +6,11 @@ This module provides the exact standalone callable function `decode_route(...)`
 requested by Member C for the FastAPI `/predict` backend endpoint.
 
 Import Statement:
-    from member_d.integration import decode_route
+    from src.integration import decode_route
 
 Example Usage:
-    from member_d.integration import decode_route
-    from member_d.road_graph import RoadGraph
+    from src.integration import decode_route
+    from src.road_graph import RoadGraph
 
     graph = RoadGraph.from_trip_directory("data/raw/student_test/00000000")
     result = decode_route(
@@ -24,8 +24,8 @@ Example Usage:
 from __future__ import annotations
 
 from typing import Any, Sequence
-from member_d.road_graph import RoadGraph
-from member_d.hmm_decoder import HMMDecoder
+from src.road_graph import RoadGraph
+from src.hmm_decoder import HMMDecoder
 
 
 def decode_route(

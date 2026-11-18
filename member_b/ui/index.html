@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PathSnap · Route evaluation</title>
+<style>
+  :root { color-scheme: light; font-family: system-ui, sans-serif; color: #152b35; background: #edf2f1; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { background: #13383b; color: white; padding: 27px max(24px, calc((100vw - 1120px)/2)); }
+  header p { margin: 5px 0 0; color: #c5ded9; }
+  h1, h2, h3, p { margin-top: 0; }
+  h1 { margin-bottom: 0; letter-spacing: -.04em; }
+  h2 { font-size: 1.17rem; margin-bottom: 16px; }
+  main { margin: 24px auto; padding: 0 18px; max-width: 1156px; display: grid; grid-template-columns: 302px minmax(0,1fr); align-items: start; gap: 18px; }
+  section { background: white; border: 1px solid #d6e2df; border-radius: 13px; padding: 19px; }
+  label { display: block; font-weight: 650; margin: 13px 0 6px; }
+  input, select, textarea, button { font: inherit; border-radius: 6px; padding: 9px; }
+  input, select, textarea { border: 1px solid #8da8a5; width: 100%; color: inherit; background: white; }
+  textarea { min-height: 80px; resize: vertical; }
+  button { border: 1px solid #8da8a5; background: #fff; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  button.primary { background: #145d58; color: white; border-color: #145d58; width: 100%; margin-top: 15px; font-weight: 700; }
+  :focus-visible { outline: 3px solid #bb731b; outline-offset: 3px; }
+  details { border-top: 1px solid #d6e2df; margin-top: 16px; padding-top: 14px; }
+  summary { cursor: pointer; font-weight: 650; }
+  .hint { font-size: .86rem; color: #405a61; margin: 8px 0 0; }
+  .heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .heading h2 { margin-bottom: 8px; }
+  #badge { background: #eaf4ef; padding: 4px 9px; border-radius: 99px; font-size: .82rem; }
+  #status { min-height: 24px; margin: 8px 0; color: #405a61; }
+  #status[data-error="true"] { color: #a42525; }
+  .map { position: relative; border: 1px solid #d6e2df; border-radius: 9px; overflow: hidden; }
+  canvas { display: block; width: 100%; height: clamp(270px, 46vh, 480px); }
+  .map-tools { position: absolute; top: 9px; right: 9px; }
+  .map-tools button { padding: 5px 9px; }
+  dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0 0; }
+  dl div { background: #f0f5f3; padding: 11px; border-radius: 7px; }
+  dt { font-size: .8rem; color: #405a61; }
+  dd { margin: 4px 0 0; font-size: 1.2rem; font-weight: 700; }
+  @media (max-width: 740px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><h1>PathSnap</h1><p>Route evaluation</p></header>
+<main>
+  <section aria-labelledby="controls-title">
+    <h2 id="controls-title">Evaluation trip</h2>
+    <form id="prediction">
+      <label for="mode">Data source</label>
+      <select id="mode"><option value="demo">Demo data</option><option value="live">Laptop 1 API</option></select>
+      <div id="connection" hidden>
+        <label for="api">Laptop 1 API address</label>
+        <input id="api" type="url" placeholder="http://192.168.1.10:8000" spellcheck="false">
+        <button id="load" type="button" style="margin-top:8px">Load trips</button>
+        <details>
+          <summary>Enter trip IDs manually</summary>
+          <label for="manual">One evaluator trip ID per line</label>
+          <textarea id="manual" spellcheck="false"></textarea>
+          <button id="apply" type="button">Use these IDs</button>
+        </details>
+      </div>
+      <label for="trip">Trip</label>
+      <select id="trip" required></select>
+      <button class="primary" id="predict" type="submit">Reconstruct route</button>
+    </form>
+  </section>
+  <section aria-labelledby="route-title">
+    <div class="heading"><h2 id="route-title">Predicted route</h2><span id="badge">Demo</span></div>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div class="map">
+      <canvas id="route" role="img" aria-label="Predicted route plotted by longitude and latitude"></canvas>
+      <div class="map-tools" aria-label="Map zoom controls">
+        <button id="out" aria-label="Zoom out" disabled>−</button>
+        <button id="in" aria-label="Zoom in" disabled>+</button>
+        <button id="fit" disabled>Fit</button>
+      </div>
+    </div>
+    <p class="hint">Green marker: start. Rust marker: end. Disconnected stretches are drawn separately.</p>
+    <dl>
+      <div><dt>Pointwise accuracy</dt><dd id="accuracy">—</dd></div>
+      <div><dt>Correct observations</dt><dd id="correct">—</dd></div>
+      <div><dt>Scored observations</dt><dd id="scored">—</dd></div>
+    </dl>
+  </section>
+</main>
+<script>
+"use strict";
+const byId = (id) => document.getElementById(id);
+const mode = byId("mode");
+const trip = byId("trip");
+const canvas = byId("route");
+const context = canvas.getContext("2d");
+const demoTrips = Array.from({length: 10}, (_, i) => {
+  const number = String(i + 1).padStart(2, "0");
+  return {trip_id: "demo-" + number, label: "Demo trip " + number};
+});
+let lines = [];
+let zoom = 1;
+let activeRequest = null;
+
+function status(message, isError = false) {
+  byId("status").textContent = message;
+  byId("status").dataset.error = String(isError);
+}
+
+function setTrips(values) {
+  const ids = new Set();
+  const items = [];
+  for (const value of values) {
+    const id = typeof value === "string" ? value : value?.trip_id;
+    if (typeof id !== "string" || !id.trim() || ids.has(id)) continue;
+    ids.add(id);
+    items.push(new Option(value?.label || id, id));
+  }
+  trip.replaceChildren(...items);
+  byId("predict").disabled = !items.length || !!activeRequest;
+}
+
+function baseUrl() {
+  let url;
+  try { url = new URL(byId("api").value.trim()); }
+  catch { throw new Error("Enter a valid HTTP or HTTPS API address."); }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password ||
+      url.search || url.hash) throw new Error("Enter a valid HTTP or HTTPS API address.");
+  return url.href.replace(/\/+$/, "");
+}
+
+async function api(path, request) {
+  try {
+    const response = await fetch(baseUrl() + path, request);
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(typeof payload?.detail === "string" ? payload.detail : "API returned HTTP " + response.status + ".");
+    }
+    if (!payload) throw new Error("The API did not return JSON.");
+    return payload;
+  } catch (error) {
+    if (error instanceof TypeError && !(error instanceof DOMException)) {
+      throw new Error("Could not reach laptop 1. Check the API address, network, and CORS settings.");
+    }
+    throw error;
+  }
+}
+
+function demoResult(id) {
+  const offset = Number(id.split("-")[1]) * 0.005;
+  const route = [[77.573,12.933],[77.576,12.941],[77.581,12.945],[77.579,12.952],[77.586,12.957],[77.595,12.958]];
+  return {
+    trip_id: id,
+    predicted_route: {type: "LineString", coordinates: route.map(([lon, lat]) => [lon + offset, lat])},
+    metrics: {pointwise_accuracy: 0.8, correct_observations: 80, scored_observations: 100}
+  };
+}
+
+function render(payload, requestedId) {
+  if (payload.trip_id !== requestedId) throw new Error("The response returned a different trip ID.");
+  const route = payload.predicted_route;
+  const next = route?.type === "LineString" ? [route.coordinates] :
+    route?.type === "MultiLineString" ? route.coordinates : [];
+  if (!Array.isArray(next) || !next.length || next.some(part => !Array.isArray(part) || part.length < 2 ||
+      part.some(point => !Array.isArray(point) || !Number.isFinite(point[0]) ||
+      !Number.isFinite(point[1]) || Math.abs(point[0]) > 180 || Math.abs(point[1]) > 90))) {
+    throw new Error("The API response needs a valid GeoJSON LineString or MultiLineString.");
+  }
+  const metrics = payload.metrics || {};
+  const {pointwise_accuracy: accuracy, correct_observations: correct, scored_observations: scored} = metrics;
+  if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > 1 ||
+      !Number.isInteger(correct) || !Number.isInteger(scored) || scored <= 0 || correct < 0 || correct > scored) {
+    throw new Error("The API response needs valid aggregate accuracy and observation counts.");
+  }
+  byId("accuracy").textContent = new Intl.NumberFormat(undefined, {style: "percent", maximumFractionDigits: 2}).format(accuracy);
+  byId("correct").textContent = correct.toLocaleString();
+  byId("scored").textContent = scored.toLocaleString();
+  lines = next;
+  zoom = 1;
+  for (const button of ["fit", "in", "out"]) byId(button).disabled = false;
+  draw();
+}
+
+function clearResult() {
+  for (const id of ["accuracy", "correct", "scored"]) byId(id).textContent = "—";
+  for (const id of ["fit", "in", "out"]) byId(id).disabled = true;
+  lines = [];
+  draw();
+}
+
+function draw() {
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const pixelRatio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  context.scale(pixelRatio, pixelRatio);
+  context.fillStyle = "#f4f8f6";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = "#dce9e4";
+  context.lineWidth = 1;
+  context.beginPath();
+  for (let x = 24; x < width; x += 40) { context.moveTo(x, 0); context.lineTo(x, height); }
+  for (let y = 20; y < height; y += 40) { context.moveTo(0, y); context.lineTo(width, y); }
+  context.stroke();
+  context.font = "13px system-ui";
+  context.fillStyle = "#405a61";
+  if (!lines.length) {
+    context.textAlign = "center";
+    context.fillText("Select a trip and reconstruct its route.", width / 2, height / 2);
+    return;
+  }
+  let west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
+  for (const part of lines) {
+    for (const [lon, lat] of part) {
+      west = Math.min(west, lon); east = Math.max(east, lon);
+      south = Math.min(south, lat); north = Math.max(north, lat);
+    }
+  }
+  const lonCenter = (west + east) / 2;
+  const latCenter = (south + north) / 2;
+  const aspect = Math.max(.01, Math.cos(latCenter * Math.PI / 180));
+  const fit = Math.min((width - 56) / Math.max(.00001, (east - west) * aspect),
+                       (height - 68) / Math.max(.00001, north - south));
+  const plot = ([lon, lat]) => [width / 2 + (lon - lonCenter) * aspect * fit * zoom,
+    height / 2 - (lat - latCenter) * fit * zoom];
+  context.strokeStyle = "#14675c";
+  context.lineWidth = 4;
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const part of lines) {
+    context.beginPath();
+    context.moveTo(...plot(part[0]));
+    for (const point of part.slice(1)) context.lineTo(...plot(point));
+    context.stroke();
+  }
+  for (const [point, color] of [[lines[0][0], "#187350"], [lines.at(-1).at(-1), "#a84825"]]) {
+    context.beginPath();
+    context.arc(...plot(point), 6, 0, 2 * Math.PI);
+    context.fillStyle = color;
+    context.fill();
+    context.lineWidth = 2;
+    context.strokeStyle = "white";
+    context.stroke();
+  }
+  context.fillStyle = "#405a61";
+  context.fillText(latCenter.toFixed(4) + "° latitude · " + lonCenter.toFixed(4) + "° longitude", 12, height - 12);
+}
+
+async function loadTrips() {
+  if (activeRequest || mode.value !== "live") return;
+  const controller = new AbortController();
+  activeRequest = controller;
+  byId("load").disabled = true;
+  byId("predict").disabled = true;
+  status("Loading evaluation trips…");
+  try {
+    const data = await api("/trips", {signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)])});
+    if (activeRequest !== controller) return;
+    if (!Array.isArray(data.trips)) throw new Error("Expected a trips array from GET /trips.");
+    setTrips(data.trips);
+    status(trip.length ? trip.length + " trips available." : "No evaluation trips returned.");
+  } catch (error) {
+    if (activeRequest === controller) status(error.message + " You can also enter the trip IDs manually.", true);
+  } finally {
+    if (activeRequest === controller) {
+      activeRequest = null;
+      byId("load").disabled = false;
+      byId("predict").disabled = !trip.length;
+    }
+  }
+}
+
+byId("load").addEventListener("click", loadTrips);
+byId("apply").addEventListener("click", () => {
+  if (activeRequest) return;
+  setTrips(byId("manual").value.split(/\r?\n/).map(id => id.trim()).filter(Boolean));
+  status(trip.length ? trip.length + " trips available." : "Enter at least one trip ID.");
+});
+mode.addEventListener("change", () => {
+  activeRequest?.abort();
+  activeRequest = null;
+  const isDemo = mode.value === "demo";
+  trip.disabled = false;
+  byId("connection").hidden = isDemo;
+  byId("load").disabled = false;
+  byId("badge").textContent = isDemo ? "Demo" : "Live API";
+  clearResult();
+  setTrips(isDemo ? demoTrips : []);
+  status(isDemo ? "Demo routes and scores are illustrative." : "Enter the laptop 1 address and load trips.");
+});
+byId("prediction").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!trip.value || activeRequest) return;
+  const id = trip.value;
+  const isDemo = mode.value === "demo";
+  const controller = new AbortController();
+  activeRequest = controller;
+  byId("predict").disabled = true;
+  trip.disabled = true;
+  clearResult();
+  status("Reconstructing " + id + "…");
+  try {
+    const payload = isDemo ? demoResult(id) : await api("/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({trip_id: id}),
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(60000)])
+    });
+    if (activeRequest !== controller) return;
+    render(payload, id);
+    status(isDemo ? "Illustrative demo result for " + id + "." : "Returned route for trip " + id + ".");
+  } catch (error) {
+    if (activeRequest === controller) status(error.name === "TimeoutError" ? "Laptop 1 took too long to respond." : error.message, true);
+  } finally {
+    if (activeRequest === controller) {
+      activeRequest = null;
+      byId("predict").disabled = !trip.length;
+      trip.disabled = false;
+    }
+  }
+});
+byId("fit").addEventListener("click", () => { zoom = 1; draw(); });
+byId("in").addEventListener("click", () => { zoom = Math.min(4, zoom * 1.25); draw(); });
+byId("out").addEventListener("click", () => { zoom = Math.max(.5, zoom / 1.25); draw(); });
+new ResizeObserver(draw).observe(canvas);
+setTrips(demoTrips);
+status("Demo routes and scores are illustrative.");
+draw();
+</script>
+</body>
+</html>

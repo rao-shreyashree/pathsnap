@@ -8,3 +8,10 @@ matplotlib
 pyarrow
 scikit-learn
 tqdm
+# Added by C (append to the shared requirements.txt)
+fastapi
+uvicorn[standard]
+pydantic>=2
+optuna
+joblib
+pyarrow

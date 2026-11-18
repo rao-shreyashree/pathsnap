@@ -6,3 +6,4 @@ data/train/
 data/student_test/
 *.parquet
 results/maps/
+data/

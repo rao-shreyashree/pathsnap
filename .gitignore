@@ -64,3 +64,6 @@ TEAM_INTERFACE_QUESTIONS.md
 Thumbs.db
 .vscode/
 .idea/
+*.parquet
+results/maps/
+data/

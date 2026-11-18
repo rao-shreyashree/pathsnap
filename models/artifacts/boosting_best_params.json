@@ -1,0 +1,18 @@
+{
+  "objective": "mean observation top-1, grouped CV",
+  "folds": 4,
+  "best_cv_top1": 0.7268072077434216,
+  "best_params": {
+    "learning_rate": 0.045598044903929415,
+    "max_iter": 155,
+    "max_leaf_nodes": 49,
+    "min_samples_leaf": 107,
+    "l2_regularization": 0.05342937261279776,
+    "class_weight": "balanced",
+    "early_stopping": false,
+    "random_state": 42
+  },
+  "n_trials": 7,
+  "search_seconds_this_run": 3148.067908525467,
+  "neg_frac_during_search": 0.25
+}
